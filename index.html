@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      try {
+        const theme = localStorage.getItem("sediment-theme");
+        document.documentElement.dataset.theme = ["light", "dark", "system"].includes(theme) ? theme : "light";
+      } catch { document.documentElement.dataset.theme = "light"; }
+    </script>
+    <style>
+      html[data-theme="dark"] { background: #191919; color-scheme: dark; }
+      @media (prefers-color-scheme: dark) {
+        html[data-theme="system"] { background: #191919; color-scheme: dark; }
+      }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="description"
+      content="沉淀，一处安放想法、连接知识、更新理解的个人工作空间。"
+    />
+    <title>沉淀 · 知识工作空间</title>
+    <link
+      id="font-noto-sans-sc"
+      rel="stylesheet"
+      href="/fonts/noto-sans-sc/400.css"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

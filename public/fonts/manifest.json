@@ -1,0 +1,102 @@
+[
+  {
+    "id": "noto-sans-sc",
+    "family": "Noto Sans SC",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "http://scripts.sil.org/OFL",
+      "attribution": "Google Inc."
+    },
+    "source": "https://fontsource.org/fonts/noto-sans-sc"
+  },
+  {
+    "id": "noto-serif-sc",
+    "family": "Noto Serif SC",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "http://scripts.sil.org/OFL",
+      "attribution": "Google Inc."
+    },
+    "source": "https://fontsource.org/fonts/noto-serif-sc"
+  },
+  {
+    "id": "lxgw-wenkai-tc",
+    "family": "LXGW WenKai TC",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "https://openfontlicense.org",
+      "attribution": "Copyright 2024 The LXGW WenKai Project Authors (https://github.com/lxgw/LxgwWenkaiTC) LXGWWenKaiTC-Regular.ttf: Copyright 2024 The LXGW WenKai Project Authors (https://github.com/lxgw/LxgwWenkaiTC) LXGWWenKaiTC-Bold.ttf: Copyright 2024 The LXGW WenKai Project Authors (https://github.com/lxgw/LxgwWenkaiTC)"
+    },
+    "source": "https://fontsource.org/fonts/lxgw-wenkai-tc"
+  },
+  {
+    "id": "lxgw-wenkai-mono-tc",
+    "family": "LXGW WenKai Mono TC",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "https://openfontlicense.org",
+      "attribution": "Copyright 2024 The LXGW WenKai Project Authors (https://github.com/lxgw/LxgwWenkaiTC) LXGWWenKaiMonoTC-Regular.ttf: Copyright 2024 The LXGW WenKai Project Authors (https://github.com/lxgw/LxgwWenkaiTC) LXGWWenKaiMonoTC-Bold.ttf: Copyright 2024 The LXGW WenKai Project Authors (https://github.com/lxgw/LxgwWenkaiTC)"
+    },
+    "source": "https://fontsource.org/fonts/lxgw-wenkai-mono-tc"
+  },
+  {
+    "id": "zcool-xiaowei",
+    "family": "ZCOOL XiaoWei",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "https://openfontlicense.org",
+      "attribution": "Copyright 2018 The ZCOOL XiaoWei Project Authors (https://www.github.com/googlefonts/xiaowei)"
+    },
+    "source": "https://fontsource.org/fonts/zcool-xiaowei"
+  },
+  {
+    "id": "zcool-qingke-huangyou",
+    "family": "ZCOOL QingKe HuangYou",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "https://openfontlicense.org",
+      "attribution": "Copyright 2018 The ZCOOL QingKe HuangYou Project Authors (https://www.github.com/googlefonts/zcool-qingke-huangyou)"
+    },
+    "source": "https://fontsource.org/fonts/zcool-qingke-huangyou"
+  },
+  {
+    "id": "inter",
+    "family": "Inter",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "https://openfontlicense.org",
+      "attribution": "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter) Inter-Italic[opsz,wght].ttf: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)"
+    },
+    "source": "https://fontsource.org/fonts/inter"
+  },
+  {
+    "id": "ibm-plex-sans",
+    "family": "IBM Plex Sans",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "https://openfontlicense.org",
+      "attribution": "Copyright 2019 IBM Corp. All rights reserved. IBMPlexSans-Italic[wdth,wght].ttf: Copyright 2019 IBM Corp. All rights reserved."
+    },
+    "source": "https://fontsource.org/fonts/ibm-plex-sans"
+  },
+  {
+    "id": "source-sans-3",
+    "family": "Source Sans 3",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "http://scripts.sil.org/OFL",
+      "attribution": "Google Inc."
+    },
+    "source": "https://fontsource.org/fonts/source-sans-3"
+  },
+  {
+    "id": "literata",
+    "family": "Literata",
+    "license": {
+      "type": "OFL-1.1",
+      "url": "https://openfontlicense.org",
+      "attribution": "Copyright 2017 The Literata Project Authors (https://github.com/googlefonts/literata) Literata-Italic[opsz,wght].ttf: Copyright 2017 The Literata Project Authors (https://github.com/googlefonts/literata)"
+    },
+    "source": "https://fontsource.org/fonts/literata"
+  }
+]
