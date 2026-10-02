@@ -39,6 +39,7 @@ export interface Item {
   body_prev?: string | null;
   edited_body_at?: string | null;
   space_id?: string | null;
+  revision?: number;
   [key: string]: unknown;
 }
 export interface Reply {
@@ -55,6 +56,7 @@ export interface Reply {
   atts: Attachment[];
   deleted_at?: string | null;
   ai?: Record<string, unknown>;
+  item_revision?: number;
 }
 export interface Profile {
   owner_id: string;

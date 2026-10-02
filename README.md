@@ -1,4 +1,4 @@
-# 沉淀 · 知识工作空间 v4.2
+# 沉淀 · 知识工作空间 v4.3
 
 记录即时灵感、个人思考与新的发现，让它们逐步形成可回看、可修正、可复用的知识。支持独立账号、团队空间、理解历史与个人回顾，采用黑白界面和常驻右上角的深浅色开关。
 
@@ -6,7 +6,7 @@
 
 ## 启动
 
-需要 Node.js **22.13+ 或 24+**，Python **3.10+**。
+需要 Node.js **22.13+ 或 24+**，Python **3.11+**。
 
 ```bash
 npm ci
@@ -25,7 +25,7 @@ python server/app.py
 npm run dev
 ```
 
-Vite 位于 `http://127.0.0.1:5173`，只将知识工作空间的 `/api` 请求转给本地服务。**AI 请求不使用此代理。**
+Vite 位于 `http://127.0.0.1:5173`，将 `/api`、OAuth 与发现元数据请求转给本地服务。**AI 请求不使用此代理。**
 
 ## 使用自己的 AI
 
@@ -61,7 +61,7 @@ Vite 位于 `http://127.0.0.1:5173`，只将知识工作空间的 `/api` 请求�
 - 无标题快速记录、设备草稿、附件、模板与来源链接。
 - 收件箱、多主题关联、主题说明、事务合并。
 - 补充、引用、进展、当前理解与理解变化历史。
-- 经验手册、验证状态、星标、归档。
+- 经验手册、个人态度与独立实践验证、星标、归档。
 - 显式选择个人回顾周期，保留次数和时间。
 - 正文与补充搜索、空间/类型/时间筛选。
 - 回收站、编辑版本、备份与恢复、Markdown/JSON/ZIP 导出。
@@ -69,6 +69,41 @@ Vite 位于 `http://127.0.0.1:5173`，只将知识工作空间的 `/api` 请求�
 - 十种免费开源字体、可调字号、行距、阅读宽度、密度和减少动效。
 
 [产品与设计说明](docs/设计与功能说明.md) · [AI 实现与边界](docs/AI接入说明.md) · [验证记录](docs/验证记录.md) · [Logo 使用说明](docs/design/Logo使用说明.md)
+
+## Agent、API 与自己的知识工具
+
+“偏好设置 → 连接与迁移”管理范围授权、目的地、待采纳建议、导出记录、增量规则、访问审计和团队外部策略。
+
+- `/api/v1` 提供版本化知识接口；原文、理解、讨论、历史、附件分别选择。内容包含稳定片段 ID、修订、作者、出处与完整性标注。
+- 用户自己的 Agent 使用 Python SDK、CLI 或 MCP。搜索只匹配授权内容，分页和变化游标不公开全站序号；撤销、停用账号或移出团队会阻断后续访问。
+- Agent 的整理默认进入待采纳区，用户核对、编辑后收录；直接写入需要额外的固定动作和每日上限授权。
+- 在知识详情或知识集合选择“提取与沉淀”，选择材料与片段，使用完整记录或整理成文。自己的浏览器 AI 可以整理稿件，Key 仍只在浏览器。
+- 用户确认固定稿件、源修订和目标后，本地连接器写入 Obsidian、飞书文档／知识库、ima 笔记／知识库，并提交注明验证级别的回执。
+- 固定增量规则可以预先批准完整记录；本地连接器离线时，任务保留在队列。未知写入结果不能自动重建。
+
+安装客户端与本地 MCP：
+
+```bash
+python -m pip install -e ".[mcp,keychain]"
+sediment keychain-set my-agent
+sediment profile-add default --url http://127.0.0.1:8787 --credential keychain:my-agent
+sediment capabilities
+sediment mcp
+```
+
+`keychain-set` 交互读取令牌，不在命令行接受明文。没有系统钥匙串时，可配置 `env:SEDIMENT_TOKEN`，由自己的运行环境提供变量；不会降级写入明文文件。
+
+远程 Streamable HTTP MCP 是独立进程：
+
+```bash
+sediment mcp --transport streamable-http --url http://127.0.0.1:8787 --resource http://127.0.0.1:8791/mcp --port 8791
+```
+
+远程进程逐次验证客户端令牌，通过核心服务提供 OAuth 授权码、S256 PKCE、资源绑定、短时令牌、刷新轮换与发现元数据。核心服务的 `SEDIMENT_MCP_PUBLIC_URL` 必须与 MCP 的 `--resource` 一致。OAuth 的人工同意页不会提供给 Agent 自行调用。
+
+仓库提供四个标准 Agent Skill；复制到自己的 Agent 技能目录后使用，它们不包含密钥，也不增加权限。
+
+[开放知识与连接器使用说明](docs/开放知识与连接器.md) · [OpenAPI](docs/openapi-v1.json) · [Skill](skills/) · [扩展开发契约](docs/扩展开发契约.md)
 
 ## 私有资料与迁移
 
@@ -83,6 +118,7 @@ Vite 位于 `http://127.0.0.1:5173`，只将知识工作空间的 `/api` 请求�
 ```bash
 npm run build
 npm run test:ai
+python -m pip install -e ".[test]"
 npm test
 ```
 
@@ -91,6 +127,7 @@ npm test
 ```bash
 python tests/browser_smoke.py
 python tests/browser_ai.py
+python tests/browser_connect.py
 ```
 
 可通过 `SEDIMENT_CHROMIUM` 指定 Chromium 路径。AI 浏览器检查使用本地协议测试服务，核对请求、存储、文件解析与收录，不消耗真实 API 配额。
@@ -100,7 +137,10 @@ python tests/browser_ai.py
 ```text
 src/ai/           浏览器配置、协议适配、材料读取、AI 侧栏与收录
 src/views/        知识、设置、团队及管理页面
-server/app.py     知识 API、SQLite、身份与权限、备份
+server/           核心 API、SQLite、知识修订、授权、OAuth、建议与任务
+sediment/         Python SDK、CLI、MCP、本地连接器与账本
+src/connect/      授权、目的地、提取预览、待采纳、验证与审计界面
+skills/           四个 Agent Skills
 public/fonts/     十种开源字体及授权
 public/brand/     单色矢量品牌素材
 scripts/          启动与本地字体/PDF 资源准备
@@ -110,4 +150,4 @@ docs/             产品、接入与验证说明
 
 构建自动从锁定的 npm 依赖准备字体及 PDF 资源。部署后的阅读不依赖远程字体 CDN。
 
-此版本是可运行的本地应用，尚未提供生产邮箱验证、邮件找回、完整审计、多人编辑冲突处理或公开收费服务。对外运营仍需生产认证、HTTPS、托管存储及运维设计。不要将运行目录、私有迁移文件或个人截图提交到 GitHub。
+此版本已提供授权审计、修订冲突检查与可持久化任务，默认仍为本机运行。生产模式需要 HTTPS 公共地址及离线配置的所有者账号，禁止匿名所有者和首次访客认领。公开运营还需要反向代理限流、邮件验证与找回、备份和运维；本次没有部署服务器。飞书、ima 已通过合成协议测试，真实账号仍需配置后验证。不要将运行目录、私有迁移文件或个人截图提交到 GitHub。

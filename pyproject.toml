@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sediment-knowledge"
+version = "4.3.0"
+description = "Scoped knowledge client, MCP server and local destination runner"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+mcp = ["mcp==1.29.0"]
+keychain = ["keyring>=25,<26"]
+test = ["mcp==1.29.0", "jsonschema>=4.20,<5"]
+
+[project.scripts]
+sediment = "sediment.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["sediment*"]

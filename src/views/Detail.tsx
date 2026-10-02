@@ -41,6 +41,7 @@ import { AITrigger } from "../ai/Provider";
 import { useAI } from "../ai/context";
 import { readFile } from "../ai/reading";
 import { safeAIError } from "../ai/client";
+import { ExtractButton, ValidationCard, CitationButton } from "../connect/KnowledgeActions";
 export function AttachmentList({ atts }: { atts: Attachment[] }) {
   const { notify } = useWorkspace();
   const ai = useAI();
@@ -188,6 +189,7 @@ export function Detail({ item, close }: { item: Item; close: () => void }) {
       <div className="detail-toolbar">
         <span className="tag">{kindLabel[item.type]}</span>
         <div>
+          <ExtractButton items={[item]} />
           <AITrigger label="AI 分析" target={{title:titleOf(item),itemId:item.id}} mode="analysis"/>
           {editable && (
             <IconButton
@@ -486,9 +488,11 @@ export function Detail({ item, close }: { item: Item; close: () => void }) {
               收录为经验
             </button>
           )}
+          {item.type === "experience" && <ValidationCard item={item}/>}
+          <CitationButton item={item}/>
           {item.type === "experience" && editable && (
             <label className="experience-status">
-              验证状态
+              个人态度
               <select
                 value={item.exp_st || "需要再确认"}
                 onChange={(e) => void update({ exp_st: e.target.value })}

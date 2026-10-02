@@ -17,3 +17,6 @@ test-results/
 public/pdfjs/
 docs/design/*.png
 legacy/
+*.egg-info/
+build/
+.venv/

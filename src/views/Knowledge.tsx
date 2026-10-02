@@ -1,3 +1,5 @@
+import {ExtractButton} from "../connect/KnowledgeActions";
+import {Operations} from "../connect/Connections";
 import {
   ArrowLeft,
   ArrowRight,
@@ -566,16 +568,17 @@ export function LibraryView({ view }: { view: View }) {
         }
         description={descriptions[view]}
         actions={
-          <button
+          <><ExtractButton items={notes}/><button
             className="primary"
             onClick={() => go("home")}
             disabled={!canWrite}
           >
             <Plus size={16} />
             新建记录
-          </button>
+          </button></>
         }
       />
+      {view==="inbox"&&<Operations compact/>}
       <div className="collection-tools">
         <div className="filter-tabs">
           {(view === "experiences"

@@ -1,7 +1,7 @@
 {
   "name": "sediment-knowledge-system",
   "private": true,
-  "version": "4.2.0",
+  "version": "4.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -13,7 +13,8 @@
     "test:ai": "vitest run",
     "test:browser": "python tests/browser_smoke.py",
     "predev": "python scripts/prepare-fonts.py",
-    "test:browser:ai": "python tests/browser_ai.py"
+    "test:browser:ai": "python tests/browser_ai.py",
+    "test:browser:connect": "python tests/browser_connect.py"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

@@ -3,19 +3,34 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 from datetime import datetime, timezone, timedelta
-import sqlite3, json, os, uuid, threading, time, io, zipfile, hashlib, secrets, hmac
+import sqlite3, json, os, sys, uuid, threading, time, io, zipfile, hashlib, secrets, hmac
 from http.cookies import SimpleCookie
+import kbase
+import open_api
+import oauth
 
 ROOT = Path(__file__).resolve().parent
 STORE = Path(os.environ.get('SEDIMENT_STORAGE', ROOT / 'storage'))
 OWNER = os.environ.get('SEDIMENT_OWNER', '')
 LOCK = threading.RLock()
+PRODUCTION = os.environ.get('SEDIMENT_ENV', 'local') == 'production'
+PUBLIC_URL = os.environ.get('SEDIMENT_PUBLIC_URL', '').rstrip('/')
+
+def production_ready():
+    """Never expose the anonymous local owner or allow the first visitor to claim it."""
+    if not PRODUCTION: return
+    url = urlparse(PUBLIC_URL)
+    if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment or url.path:
+        raise ValueError('生产模式需要有效的 HTTPS SEDIMENT_PUBLIC_URL，不能包含路径或凭据')
+    with connect() as db:
+        if not db.execute('SELECT 1 FROM accounts WHERE id=? AND disabled=0', (OWNER,)).fetchone():
+            raise ValueError('生产模式需要先离线配置所有者账号；请运行 scripts/provision-owner.py')
 
 def now():
     return datetime.now(timezone.utc).isoformat()
 
 def connect():
-    db = sqlite3.connect(STORE / 'workspace.sqlite3')
+    db = sqlite3.connect(STORE / 'workspace.sqlite3', factory=kbase.TrackedConnection)
     db.row_factory = sqlite3.Row
     db.execute('PRAGMA foreign_keys=ON')
     return db
@@ -43,6 +58,11 @@ def initialize():
         ''')
         if 'owner' not in [x['name'] for x in db.execute('PRAGMA table_info(backups)')]:
             db.execute('ALTER TABLE backups ADD COLUMN owner TEXT NOT NULL DEFAULT "' + OWNER + '"')
+        if 'owner' not in [x['name'] for x in db.execute('PRAGMA table_info(files)')]:
+            db.execute('ALTER TABLE files ADD COLUMN owner TEXT')
+            for record in db.execute('SELECT owner,data FROM documents').fetchall():
+                for att in json.loads(record['data']).get('atts',[]):
+                    db.execute('UPDATE files SET owner=? WHERE id=? AND owner IS NULL',(record['owner'],att.get('id')))
         if 'disabled' not in [x['name'] for x in db.execute('PRAGMA table_info(accounts)')]:
             db.execute('ALTER TABLE accounts ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0')
         if not db.execute("SELECT 1 FROM metadata WHERE key='initialized'").fetchone():
@@ -61,6 +81,8 @@ def initialize():
             primary = db.execute("SELECT owner, COUNT(*) AS n FROM documents WHERE kind='item' GROUP BY owner ORDER BY n DESC LIMIT 1").fetchone()
             OWNER = local_owner['data'] if local_owner else account_owner['id'] if account_owner else primary['owner'] if primary else 'local-' + uuid.uuid4().hex
         db.execute("INSERT OR REPLACE INTO metadata VALUES ('local_owner',?)", (OWNER,))
+        kbase.initialize(db)
+        oauth.initialize(db)
 
 def rows(db, kind):
     return [json.loads(r['data']) for r in db.execute('SELECT data FROM documents WHERE kind=?', (kind,))]
@@ -70,7 +92,8 @@ def snapshot(db, owner=OWNER):
     ids = {x['id'] for x in items}
     return {'format': 'sediment', 'version': 4, 'exported_at': now(), 'owner_id': owner,
             'items': items, 'replies': [x for x in rows(db, 'reply') if x['item_id'] in ids or x['owner_id'] == owner],
-            'profiles': [json.loads(x['data']) for x in db.execute('SELECT data FROM profiles')],
+            'profiles': [json.loads(x['data']) for x in db.execute('SELECT id,data FROM profiles') if x['id'] in {owner}|{r['owner_id'] for r in rows(db,'reply') if r['item_id'] in ids}],
+            'knowledge_revisions': [dict(x) for x in db.execute('SELECT * FROM knowledge_revisions') if x['item_id'] in ids],
             'versions': [dict(x) for x in db.execute('SELECT * FROM versions') if x['item_id'] in ids],
             'reviews': [dict(x) for x in db.execute('SELECT item_id,data FROM reviews WHERE account=?', (owner,))],
             'preferences': json.loads((db.execute('SELECT data FROM metadata WHERE key=?', ('preferences:' + owner,)).fetchone() or {'data': '{}'})['data'])}
@@ -84,6 +107,8 @@ def make_backup(db, owner=OWNER):
 def periodic_backup():
     while True:
         with LOCK, connect() as db:
+            from transfers import run_rules
+            run_rules(db,sys.modules[__name__])
             owners = [x['id'] for x in db.execute('SELECT id FROM accounts')] or [OWNER]
             for owner in owners:
                 last = db.execute('SELECT at FROM backups WHERE owner=? ORDER BY at DESC LIMIT 1', (owner,)).fetchone()
@@ -100,7 +125,7 @@ def validate_doc(doc, kind):
         if not isinstance(doc.get('topic_ids', []), list) or not all(isinstance(x, str) for x in doc.get('topic_ids', [])): raise ValueError('主题关联格式无效')
     elif not isinstance(doc.get('item_id'), str): raise ValueError('补充缺少原文 ID')
     for field in ('title', 'source'):
-        if doc.get(field) is not None and not isinstance(doc[field], str): raise ValueError('内容字段格式无效')
+        if doc.get(field) is not None and (not isinstance(doc[field], str) or len(doc[field])>(500 if field=='title' else 4096)): raise ValueError('内容字段格式无效或过长')
     if not isinstance(doc.get('created_at'), str):
         # New writes receive their timestamp on the server; imports are checked separately.
         doc['created_at'] = now()
@@ -109,6 +134,40 @@ def validate_doc(doc, kind):
         if not isinstance(att, dict) or not isinstance(att.get('id'), str) or '/' in att['id'] or '\\' in att['id'] or att['id'] in ('.', '..'): raise ValueError('附件 ID 无效')
         if not isinstance(att.get('name'), str) or not isinstance(att.get('size'), (int, float)): raise ValueError('附件元数据无效')
     if doc.get('space_id') is not None and not isinstance(doc['space_id'], str): raise ValueError('空间 ID 无效')
+
+def validate_attachments(db,doc,owner):
+    for att in doc.get('atts',[]):
+        stored=db.execute('SELECT owner FROM files WHERE id=?',(att['id'],)).fetchone()
+        if not stored:continue  # Missing legacy file metadata cannot grant access to a local binary.
+        if stored['owner']==owner:continue
+        legitimate=False
+        for source in rows(db,'item'):
+            if visible(db,source,owner) and not source.get('deleted_at'):
+                if any(a.get('id')==att['id'] for a in source.get('atts',[])):legitimate=True;break
+                if any(not r.get('deleted_at') and r['item_id']==source['id'] and any(a.get('id')==att['id'] for a in r.get('atts',[])) for r in rows(db,'reply')):legitimate=True;break
+        if not legitimate:raise ValueError('附件不属于当前用户，也没有已授权的共享来源')
+
+def import_revisions(db,payload,owner):
+    owned={d['id'] for d in payload['items']}
+    incoming=payload.get('knowledge_revisions',[])
+    if not isinstance(incoming,list) or len(incoming)>10000:raise ValueError('修订归档格式无效或过大')
+    for row in incoming:
+        ident=row.get('item_id')
+        if ident not in owned:raise ValueError('修订记录必须属于备份中的条目')
+        old=db.execute('SELECT hash FROM knowledge_revisions WHERE item_id=? AND revision=?',(ident,row.get('revision'))).fetchone()
+        value=json.loads(row['snapshot'])
+        if value.get('item',{}).get('owner_id')!=owner or value['item'].get('id')!=ident:raise ValueError('修订记录作者不匹配')
+        if kbase.digest(value)!=row.get('hash'):raise ValueError('修订记录校验失败')
+        if old:
+            if old['hash']!=row['hash']:raise ValueError('相同修订号的内容不同，不能覆盖不可变历史')
+            continue
+        if kbase.current_revision(db,ident):raise ValueError('现有条目的历史不接受外来插入')
+    fresh={r['item_id'] for r in incoming if not kbase.current_revision(db,r['item_id'])}
+    for ident in fresh:
+        revisions=sorted([r for r in incoming if r['item_id']==ident],key=lambda r:r['revision'])
+        if [r['revision'] for r in revisions]!=list(range(1,len(revisions)+1)):raise ValueError('修订号需从 1 连续递增')
+        for row in revisions:db.execute('INSERT INTO knowledge_revisions VALUES (?,?,?,?,?,?)',(ident,row['revision'],row['snapshot'],row['hash'],row['at'],row['actor']))
+        db.execute('INSERT INTO knowledge_heads VALUES (?,?,0)',(ident,len(revisions)))
 
 PREFERENCE_KEYS = {'font', 'size', 'uiSize', 'headingSize', 'lineHeight', 'width', 'theme', 'density', 'motion', 'accent'}
 def preferences(value, strict=True):
@@ -141,17 +200,25 @@ class Handler(BaseHTTPRequestHandler):
             if row:
                 account = db.execute('SELECT disabled FROM accounts WHERE id=?', (row['account'],)).fetchone()
                 if account and not account['disabled']: return row['account']
-        if not db.execute('SELECT 1 FROM accounts LIMIT 1').fetchone(): return OWNER
+        if not PRODUCTION and not db.execute('SELECT 1 FROM accounts LIMIT 1').fetchone(): return OWNER
         return None
 
     def session(self, db, owner):
         token = secrets.token_urlsafe(32)
         db.execute('DELETE FROM sessions WHERE expires<?', (now(),))
         db.execute('INSERT INTO sessions VALUES (?,?,?)', (hashlib.sha256(token.encode()).hexdigest(), owner, (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()))
-        self.response_cookie = 'sediment_session=' + token + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800'
+        self.response_cookie = 'sediment_session=' + token + '; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800' + ('; Secure' if PRODUCTION else '')
 
     def log_message(self, fmt, *args):
-        if os.environ.get('SEDIMENT_QUIET') != '1': super().log_message(fmt, *args)
+        if os.environ.get('SEDIMENT_QUIET') == '1': return
+        # Log route families only. OAuth codes, URL queries and arbitrary content IDs never enter access logs.
+        path = urlparse(self.path).path
+        parts = path.split('/')
+        family=parts[3] if len(parts)>3 and parts[3] in {'capabilities','openapi','search','items','extractions','changes','files','proposals','write','export-plans','operations','jobs','grants','policies','rules','audit','service-accounts','oauth'} else 'unknown'
+        legacy = parts[2] if len(parts)>2 and parts[2] in {'health','state','items','replies','profiles','preferences','files','register','login','logout','me','spaces','members','invites','export.json','backup','restore','import','merge','admin'} else 'unknown'
+        route = '/api/v1/' + family if path.startswith('/api/v1/') and len(parts)>3 else '/api/' + legacy if path.startswith('/api/') else '/oauth' if path.startswith('/oauth/') else '/web'
+        status = args[1] if fmt == '"%s" %s %s' and len(args)>1 else 'event'
+        print(json.dumps({'method':self.command,'route':route[:100],'status':status},ensure_ascii=False),file=sys.stderr)
 
     def send(self, status, value, mime='application/json; charset=utf-8', filename=None):
         content = json.dumps(value, ensure_ascii=False).encode() if mime.startswith('application/json') else value
@@ -159,6 +226,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(content)))
         self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('Referrer-Policy', 'no-referrer')
         self.send_header('Cache-Control', 'no-store')
         if hasattr(self, 'response_cookie'): self.send_header('Set-Cookie', self.response_cookie)
         if filename: self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
@@ -166,10 +234,13 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_GET(self):
+        if oauth.handle(self) or open_api.handle(self): return
         try:
             path = urlparse(self.path).path
+            if path == '/api/health': return self.send(200, {'ok': True, 'environment': 'production' if PRODUCTION else 'local'})
             with LOCK, connect() as db:
                 owner = self.identity(db)
+                db.actor = owner
                 if path.startswith('/api/') and not owner: return self.send(401, {'error': '请登录你的知识空间', 'login': True})
                 if path == '/api/state':
                     profile = db.execute('SELECT data FROM profiles WHERE id=?', (owner,)).fetchone()
@@ -177,6 +248,7 @@ class Handler(BaseHTTPRequestHandler):
                     accessible = [x for x in rows(db, 'item') if visible(db, x, owner)]
                     review_states = {x['item_id']: json.loads(x['data']) for x in db.execute('SELECT item_id,data FROM reviews WHERE account=?', (owner,))}
                     for doc in accessible:
+                        doc['revision'] = kbase.current_revision(db, doc['id'])
                         if doc['owner_id'] != owner:
                             for field in ('reviewed_at', 'review_due', 'review_interval', 'review_count', 'snooze_until', 'no_review'): doc.pop(field, None)
                         doc.update(review_states.get(doc['id'], {}))
@@ -184,7 +256,7 @@ class Handler(BaseHTTPRequestHandler):
                     spaces = [dict(x) for x in db.execute('SELECT s.*,m.role FROM spaces s JOIN members m ON s.id=m.space WHERE m.account=?', (owner,))]
                     members = [dict(x) for x in db.execute('SELECT * FROM members') if x['space'] in {s['id'] for s in spaces}]
                     return self.send(200, {'items': accessible, 'replies': [x for x in rows(db, 'reply') if x['item_id'] in ids],
-                         'profiles': [json.loads(x['data']) for x in db.execute('SELECT data FROM profiles')],
+                         'profiles': [json.loads(x['data']) for x in db.execute('SELECT id,data FROM profiles') if x['id'] in {owner}|{d['owner_id'] for d in accessible}|{r['owner_id'] for r in rows(db,'reply') if r['item_id'] in ids}|{m['account'] for m in members}],
                          'me': json.loads(profile['data']) if profile else {'owner_id': owner, 'display_name': '我的空间'},
                          'preferences': json.loads(prefs['data']) if prefs else {}, 'mode': 'local', 'spaces': spaces, 'members': members,
                          'account_enabled': bool(db.execute('SELECT 1 FROM accounts LIMIT 1').fetchone()),
@@ -232,7 +304,7 @@ class Handler(BaseHTTPRequestHandler):
                     attached = any(any(a.get('id') == ident for a in (x.get('atts') or [])) and visible(db, x, owner) for x in rows(db, 'item'))
                     if not attached:
                         parents = {x['id'] for x in rows(db, 'item') if visible(db, x, owner)}
-                        attached = any(x['item_id'] in parents and any(a.get('id') == ident for a in (x.get('atts') or [])) for x in rows(db, 'reply'))
+                        attached = any(not x.get('deleted_at') and x['item_id'] in parents and any(a.get('id') == ident for a in (x.get('atts') or [])) for x in rows(db, 'reply'))
                     if not attached: return self.send(403, {'error': '附件尚未保存到可访问的记录'})
                     if row and f.is_file() and f.parent == STORE / 'files':
                         return self.send(200, f.read_bytes(), 'application/octet-stream', 'attachment-' + ident)
@@ -249,17 +321,21 @@ class Handler(BaseHTTPRequestHandler):
         except Exception: self.send(500, {'error': '读取失败，请检查本地服务日志'})
 
     def do_POST(self):
+        if oauth.handle(self) or open_api.handle(self): return
         try:
             origin = self.headers.get('Origin')
             dev_origins = {'http://127.0.0.1:5173', 'http://localhost:5173', 'http://127.0.0.1:4173', 'http://localhost:4173'}
-            if origin and urlparse(origin).netloc != self.headers.get('Host') and origin not in dev_origins:
+            if PRODUCTION and origin != PUBLIC_URL:
+                return self.send(403, {'error': '只接受本站的 HTTPS 请求'})
+            if not PRODUCTION and origin and urlparse(origin).netloc != self.headers.get('Host') and origin not in dev_origins:
                 return self.send(403, {'error': '只接受当前工作空间的请求'})
             path = urlparse(self.path).path
             size = int(self.headers.get('Content-Length', '0'))
-            if size > 20 * 1024 * 1024: return self.send(413, {'error': '文件或导入内容不能超过 20 MB'})
+            if size < 0 or size > 20 * 1024 * 1024: return self.send(413, {'error': '文件或导入内容不能超过 20 MB'})
             raw = self.rfile.read(size)
             with LOCK, connect() as db:
                 owner = self.identity(db)
+                db.actor = owner
                 if path in ('/api/login', '/api/register'):
                     data = json.loads(raw or '{}')
                     email = str(data.get('email', '')).strip().lower()
@@ -269,6 +345,7 @@ class Handler(BaseHTTPRequestHandler):
                         if len(password) < 8 or len(password) > 200: raise ValueError('密码需要 8 至 200 位')
                         if db.execute('SELECT 1 FROM accounts WHERE email=?', (email,)).fetchone(): raise ValueError('该邮箱已注册')
                         first = not db.execute('SELECT 1 FROM accounts LIMIT 1').fetchone()
+                        if PRODUCTION and first: return self.send(503, {'error': '实例尚未配置，请联系站点所有者'})
                         account = OWNER if first else uuid.uuid4().hex
                         salt = secrets.token_hex(16)
                         name = str(data.get('display_name', '')).strip()[:40] or email.split('@')[0]
@@ -286,7 +363,7 @@ class Handler(BaseHTTPRequestHandler):
                     cookies = SimpleCookie(); cookies.load(self.headers.get('Cookie', ''))
                     token = cookies.get('sediment_session')
                     if token: db.execute('DELETE FROM sessions WHERE token=?', (hashlib.sha256(token.value.encode()).hexdigest(),))
-                    self.response_cookie = 'sediment_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'
+                    self.response_cookie = 'sediment_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0' + ('; Secure' if PRODUCTION else '')
                     return self.send(200, {'ok': True})
             if path == '/api/files':
                 ident = uuid.uuid4().hex
@@ -294,15 +371,27 @@ class Handler(BaseHTTPRequestHandler):
                 mime = self.headers.get('Content-Type', 'application/octet-stream')
                 with LOCK, connect() as db:
                     (STORE / 'files' / ident).write_bytes(raw)
-                    db.execute('INSERT INTO files VALUES (?,?,?,?)', (ident, name, mime, size))
+                    db.execute('INSERT INTO files(id,name,mime,size,owner) VALUES (?,?,?,?,?)', (ident, name, mime, size, owner))
                 return self.send(200, {'id': ident, 'name': name, 'mime': mime, 'size': size, 'path': '/api/files/' + ident, 'local': True})
             data = json.loads(raw or '{}')
             with LOCK, connect() as db:
+                db.actor = owner
                 if path in ('/api/items', '/api/replies'):
                     kind = 'item' if path.endswith('items') else 'reply'
                     validate_doc(data, kind)
                     old = db.execute('SELECT * FROM documents WHERE id=?', (data['id'],)).fetchone()
                     if old and (old['owner'] != owner or old['kind'] != kind): return self.send(403, {'error': '只能编辑自己的内容'})
+                    if old and kind == 'item' and data.get('revision') is not None and data['revision'] != kbase.current_revision(db, data['id']):
+                        return self.send(409, {'error': '这条知识已在其他位置更新，请重新加载后再保存'})
+                    if old and kind == 'reply' and json.loads(old['data']).get('item_id') != data.get('item_id'):
+                        raise ValueError('补充不可移动到另一条原文')
+                    validate_attachments(db,data,owner)
+                    if kind=='item' and old:
+                        prior_validation=json.loads(old['data']).get('validation')
+                        if data.get('validation')!=prior_validation:raise ValueError('经验验证请使用验证记录入口')
+                    elif kind=='item' and data.get('validation',{}).get('status','unverified')!='unverified':raise ValueError('经验不能自动标为已验证')
+                    data.pop('revision', None)
+                    data.pop('item_revision', None)
                     if kind == 'item':
                         space = data.get('space_id')
                         if old and json.loads(old['data']).get('space_id') != space: raise ValueError('内容归属空间不可直接更改，请复制到目标空间')
@@ -339,6 +428,9 @@ class Handler(BaseHTTPRequestHandler):
                             reply = db.execute("SELECT data FROM documents WHERE id=? AND kind='reply'", (data['und'],)).fetchone()
                             if not reply or json.loads(reply['data'])['item_id'] != data['id']: raise ValueError('当前理解必须来自原文的补充')
                     db.execute('INSERT OR REPLACE INTO documents VALUES (?,?,?,?)', (data['id'], owner, kind, json.dumps(data, ensure_ascii=False)))
+                    kbase.project_events(db)
+                    if kind == 'item': data['revision'] = kbase.current_revision(db, data['id'])
+                    else: data['item_revision'] = kbase.current_revision(db, data['item_id'])
                     return self.send(200, data)
                 if path == '/api/preferences':
                     db.execute("INSERT OR REPLACE INTO metadata VALUES (?,?)", ("preferences:" + owner, json.dumps(preferences(data))))
@@ -462,11 +554,13 @@ class Handler(BaseHTTPRequestHandler):
                             if existing and existing['kind'] != kind: raise ValueError('备份 ID 与现有内容类型冲突')
                     for doc in items:
                         validate_doc(doc, 'item')
+                        validate_attachments(db,doc,owner)
                         if doc.get('owner_id') != owner: raise ValueError('备份作者与当前工作空间不一致')
                         if doc.get('space_id') and role_for(db, doc['space_id'], owner) not in ('owner', 'admin', 'editor'): raise ValueError('没有备份中团队空间的写入权限')
                     item_ids = {d['id'] for d in items} | {x['id'] for x in rows(db, 'item') if visible(db, x, owner)}
                     for doc in replies:
                         validate_doc(doc, 'reply')
+                        validate_attachments(db,doc,owner)
                         if doc['item_id'] not in item_ids: raise ValueError('补充对应的原文不存在')
                         if doc.get('owner_id') != owner:
                             existing = db.execute("SELECT data FROM documents WHERE id=? AND kind='reply'", (doc['id'],)).fetchone()
@@ -474,6 +568,7 @@ class Handler(BaseHTTPRequestHandler):
                     for doc in items + replies:
                         old = db.execute('SELECT owner FROM documents WHERE id=?', (doc['id'],)).fetchone()
                         if old and old['owner'] != doc['owner_id']: raise ValueError('备份 ID 与另一位作者的内容冲突')
+                    import_revisions(db,payload,owner)
                     make_backup(db, owner)
                     for kind, docs in [('item', items), ('reply', replies)]:
                         for doc in docs:
@@ -499,8 +594,9 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     initialize()
+    production_ready()
     threading.Thread(target=periodic_backup, daemon=True).start()
-    # The local owner session is deliberately loopback-only. This is not online authentication.
+    # Reverse proxies may expose production mode; the application always remains loopback-only.
     port = int(os.environ.get('SEDIMENT_PORT', '8787'))
-    print(f'沉淀 · 本地工作空间 http://127.0.0.1:{port}', flush=True)
+    print(f'沉淀 · {"生产" if PRODUCTION else "本地"}工作空间 http://127.0.0.1:{port}', flush=True)
     ThreadingHTTPServer(('127.0.0.1', port), Handler).serve_forever()

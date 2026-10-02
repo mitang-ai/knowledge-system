@@ -69,7 +69,7 @@ export function Login({
         <p>
           {register
             ? "个人内容默认仅自己可见，之后可以加入团队。"
-            : "用邮箱与密码登录这个本地实例。"}
+            : "用邮箱与密码登录你的知识空间。"}
         </p>
         <form onSubmit={submit}>
           {register && (

@@ -1,6 +1,5 @@
 import {
   AlertCircle,
-  Archive,
   Check,
   Link2,
   LockKeyhole,
@@ -10,7 +9,6 @@ import {
   Moon,
   Plus,
   RotateCcw,
-  ShieldCheck,
   Sun,
   Type,
   UserPlus,
@@ -23,6 +21,7 @@ import type { Preferences } from "../types";
 import { roleLabel } from "../lib";
 import { PageHeading, SectionTitle } from "../ui";
 import { useWorkspace } from "../workspace";
+import { Connections } from "../connect/Connections";
 import { AISettings } from "../ai/Settings";
 export function SettingsView({ initialTab = "type" }: { initialTab?: string }) {
   const { ws, prefs, settings, notify, dialog, refresh } = useWorkspace();
@@ -364,51 +363,7 @@ export function SettingsView({ initialTab = "type" }: { initialTab?: string }) {
           </div>
         </div>
       )}
-      {tab === "integration" && (
-        <div className="integration-settings">
-          <div className="integration-card">
-            <div className="integration-symbol">
-              <Archive size={23} />
-            </div>
-            <div>
-              <h3>可迁移的数据</h3>
-              <p>
-                Markdown 用于阅读；JSON
-                保留结构；完整归档包含当前本地附件与缺失文件清单。备份恢复在管理工作台进行。
-              </p>
-            </div>
-            <span className="tag green-tag">已可用</span>
-          </div>
-          <div className="integration-card">
-            <div className="integration-symbol">
-              <Link2 size={23} />
-            </div>
-            <div>
-              <h3>飞书同步</h3>
-              <p>
-                原交付包的增量同步脚本已保留。新版提供可导出数据；飞书连接尚未配置，不会显示虚假的同步状态。
-              </p>
-            </div>
-            <span className="tag">待对接</span>
-          </div>
-          <div className="integration-card">
-            <div className="integration-symbol">
-              <ShieldCheck size={23} />
-            </div>
-            <div>
-              <h3>原云端系统</h3>
-              <p>
-                此版本在本地独立运行。原站点、原数据库和账号没有被修改；正式上线需部署认证服务、数据库与对象存储。
-              </p>
-            </div>
-            <span className="tag">独立保存</span>
-          </div>
-          <div className="info-strip">
-            <AlertCircle size={16} />
-            交付包缺少原附件文件本体，六个历史引用已保留。
-          </div>
-        </div>
-      )}
+      {tab === "integration" && <Connections />}
     </>
   );
 }

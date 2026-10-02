@@ -55,7 +55,7 @@ export async function generate(c: AIConnection, model: string, messages: Message
     else if(c.apiType==='responses') {text=value.output_text || (value.output||[]).flatMap((x:{content?:{type:string;text:string}[]})=>x.content||[]).filter((x:{type:string})=>x.type==='output_text').map((x:{text:string})=>x.text).join('');truncated=value.status==='incomplete';complete=value.status==='completed'||truncated;}
     else {text=value.choices?.[0]?.message?.content||'';const finish=value.choices?.[0]?.finish_reason;truncated=finish==='length';complete=!!finish;}
     if(typeof text!=='string'||!text.trim()) throw new AIError("服务未返回可读文本。检查模型能力或提高输出长度。");
-    text=clean(text);options.onDelta?.(text);return {text,requestedModel:model,model:returnedModel,complete,truncated};
+    text=clean(text);options.onDelta?.(text);return {text,requestedModel:clean(model),model:clean(returnedModel),complete,truncated};
   }
   const reader=response.body?.getReader();if(!reader)throw new AIError("服务没有返回可读取的响应。");
   const decoder=new TextDecoder();let buffer="",data:string[]=[];
@@ -75,6 +75,6 @@ export async function generate(c: AIConnection, model: string, messages: Message
     buffer+=decoder.decode();if(buffer)line(buffer);event();
   } finally {await reader.cancel().catch(()=>{});}
   if(!text.trim())throw new AIError("服务未返回可读文本，检查模型能力与输出长度。");
-  return {text:clean(text),requestedModel:model,model:returnedModel,complete,truncated};
+  return {text:clean(text),requestedModel:clean(model),model:clean(returnedModel),complete,truncated};
 }
 export function safeAIError(error:unknown) { return error instanceof AIError ? error.message : error instanceof DOMException && error.name==='AbortError' ? '已停止请求；服务已处理的部分仍可能计费。' : '请求未完成。检查网络或调整接口设置后再试。'; }

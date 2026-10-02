@@ -1,3 +1,4 @@
+import {OAuthConsent} from "./connect/Connections";
 import {
   Bookmark,
   BookOpen,
@@ -68,17 +69,17 @@ export default function App() {
   const [ws, setWs] = useState<Workspace | null>(null),
     [error, setError] = useState(""),
     [login, setLogin] = useState(false);
-  const [view, setView] = useState<View>("home"),
+  const [view, setView] = useState<View>(new URLSearchParams(location.search).has("review")?"settings":"home"),
     [space, setSpace] = useState(""),
     [selectedTopic, setSelectedTopic] = useState(""),
-    [detail, setDetail] = useState(""),
+    [detail, setDetail] = useState(new URLSearchParams(location.search).get("item")||""),
     [search, setSearch] = useState(false),
     [dialog, setDialog] = useState<Dialog>(null),
     [mobile, setMobile] = useState(false),
     [spaceMenu, setSpaceMenu] = useState(false),
     [toast, setToast] = useState("");
   const [aiReturn, setAIReturn] = useState<{view:View;topic:string;detail:string}|null>(null);
-  const [settingsTab, setSettingsTab] = useState("type");
+  const [settingsTab, setSettingsTab] = useState(new URLSearchParams(location.search).has("review")?"integration":"type");
   const [prefs, setPrefs] = useState<Preferences>(() => {
     let theme = defaultPrefs.theme;
     try {
@@ -177,6 +178,7 @@ export default function App() {
       old
         ? {
             ...old,
+            items: result.item_revision ? old.items.map(x => x.id === result.item_id ? {...x, revision: result.item_revision} : x) : old.items,
             replies: old.replies.some((x) => x.id === result.id)
               ? old.replies.map((x) => (x.id === result.id ? result : x))
               : [...old.replies, result],
@@ -246,6 +248,8 @@ export default function App() {
     settings,
     canWrite,
   };
+  const oauthRequest=new URLSearchParams(location.search).get('oauth_request');
+  if(oauthRequest)return <Context.Provider value={context}>{themeControl}<OAuthConsent id={oauthRequest}/></Context.Provider>;
   const openItem = ws.items.find((x) => x.id === detail);
   const switchSpace = (id: string) => {
     setSpace(id);
@@ -485,7 +489,7 @@ export default function App() {
           <footer className="page-footer">
             <span>留下一点想法，建立一点联系。</span>
             <span>
-              沉淀 <span className="footer-dot">·</span> v4.2
+              沉淀 <span className="footer-dot">·</span> v4.3
             </span>
           </footer>
         </div>

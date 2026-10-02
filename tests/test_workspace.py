@@ -109,12 +109,13 @@ class WorkspaceTest(unittest.TestCase):
         a = self.owner.request('items', self.item())[1]
         b = self.owner.request('items', self.item())[1]
         reply = self.owner.request('replies', {'id': 'understanding-' + a['id'], 'item_id': a['id'], 'body': '新理解', 'atts': [], 'is_progress': False})[1]
+        a = next(x for x in self.owner.request('state')[1]['items'] if x['id'] == a['id'])
         self.assertEqual(self.owner.request('items', {**a, 'und': reply['id']})[0], 200)
         self.assertEqual(self.owner.request('items', {**b, 'und': reply['id']})[0], 400)
 
     def test_backup_restore_isolated_and_preserves_versions(self):
         note = self.editor.request('items', self.item(body='备份前内容'))[1]
-        self.editor.request('items', {**note, 'body': '保存的内容'})
+        note = self.editor.request('items', {**note, 'body': '保存的内容'})[1]
         backup = self.editor.request('backups', {})[1]
         own_version_count = len(self.editor.request('versions/' + note['id'])[1])
         updated = self.editor.request('items', {**note, 'body': '备份后修改'})[1]

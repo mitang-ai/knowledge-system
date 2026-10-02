@@ -1,0 +1,39 @@
+name: Source and isolated integration checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install source dependencies
+        run: |
+          npm ci
+          python -m pip install -e '.[test]' playwright
+          python -m playwright install --with-deps chromium
+      - name: Build and check modules
+        run: |
+          npm run build
+          npm run test:ai
+          npm test
+          python scripts/audit-release.py
+      - name: Browser flows using synthetic temporary workspaces
+        run: |
+          export SEDIMENT_CHROMIUM="$(python -c 'from playwright.sync_api import sync_playwright; p = sync_playwright().start(); print(p.chromium.executable_path); p.stop()')"
+          npm run test:browser
+          npm run test:browser:ai
+          npm run test:browser:connect
