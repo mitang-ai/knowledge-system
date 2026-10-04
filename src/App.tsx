@@ -51,7 +51,7 @@ import {
 import { ManageView } from "./views/Management";
 import { SearchDialog } from "./views/Search";
 import { AIProvider, AITrigger } from "./ai/Provider";
-import { ReadingView } from "./ai/Reading";
+import { ReadingView } from "./ai/ReadingView";
 import { SettingsView } from "./views/Settings";
 import { Context, labels, type ContextValue, type Dialog } from "./workspace";
 const nav = [

@@ -8,12 +8,14 @@ export function endpoint(connection: AIConnection, path: string, origin = locati
   return url.href.replace(/\/$/,"") + "/" + path;
 }
 async function request(c: AIConnection, path: string, body: unknown, signal: AbortSignal) {
-  if (!c.key.trim()) throw new AIError("先在 AI 与模型设置中填写 API Key。");
+  const address = endpoint(c,path);
+  const loopback = ['localhost','127.0.0.1','[::1]'].includes(new URL(c.baseUrl).hostname);
+  if (!c.key.trim() && !(c.allowUnauthenticated && loopback && c.protocol === 'openai')) throw new AIError("先在 AI 与模型设置中填写 API Key。");
   const headers: Record<string,string> = {"Content-Type":"application/json"};
   if (c.protocol === "anthropic") { headers['x-api-key']=c.key.trim(); headers['anthropic-version']='2023-06-01'; headers['anthropic-dangerous-direct-browser-access']='true'; }
-  else headers.Authorization="Bearer " + c.key.trim();
+  else if(c.key.trim()) headers.Authorization="Bearer " + c.key.trim();
   let response: Response;
-  try { response = await fetch(endpoint(c,path), {method:body===undefined ? "GET" : "POST",headers,body:body===undefined ? undefined : JSON.stringify(body),signal,credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer"}); }
+  try { response = await fetch(address, {method:body===undefined ? "GET" : "POST",headers,body:body===undefined ? undefined : JSON.stringify(body),signal,credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer"}); }
   catch (e) { if (signal.aborted) throw new DOMException("已取消","AbortError"); if (e instanceof AIError) throw e; throw new AIError("浏览器未能直连接口。检查地址、网络与服务的跨域支持；本系统不会代理密钥。"); }
   if (!response.ok) {
     await response.body?.cancel();

@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "types": ["chrome"], "noEmit": true },
+  "include": [
+    "src",
+    "../src/Brand.tsx",
+    "../src/ai/client.ts",
+    "../src/ai/types.ts"
+  ]
+}

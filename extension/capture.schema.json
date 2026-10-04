@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:sediment:capture:v1",
+  "title": "Sediment Capture Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "kind",
+    "title",
+    "text",
+    "thought",
+    "capturedAt"
+  ],
+  "properties": {
+    "schema": {
+      "const": "sediment.capture.v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "kind": {
+      "enum": ["thought", "article", "selection", "bookmark", "thread"]
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 240
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 95000
+    },
+    "thought": {
+      "type": "string",
+      "maxLength": 16000
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 60
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "title", "coverage", "warnings"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 4096,
+          "pattern": "^https?://"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "author": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "site": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "coverage": {
+          "enum": [
+            "extracted-article",
+            "selection-only",
+            "loaded-content",
+            "link-only"
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "requestedModel",
+        "model",
+        "complete",
+        "truncated",
+        "task",
+        "generatedAt"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 32000
+        },
+        "requestedModel": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "task": {
+          "enum": ["summary", "insight", "questions", "polish"]
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 60
+        }
+      }
+    }
+  }
+}

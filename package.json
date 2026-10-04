@@ -14,7 +14,11 @@
     "test:browser": "python tests/browser_smoke.py",
     "predev": "python scripts/prepare-fonts.py",
     "test:browser:ai": "python tests/browser_ai.py",
-    "test:browser:connect": "python tests/browser_connect.py"
+    "test:browser:connect": "python tests/browser_connect.py",
+    "typecheck:extension": "tsc -p extension/tsconfig.json",
+    "build:extension": "npm run typecheck:extension && node scripts/build-extension.mjs",
+    "test:extension": "vitest run tests/extension.test.ts tests/ai.test.ts",
+    "test:browser:extension": "node tests/browser_extension.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -34,9 +38,15 @@
     "@fontsource/source-sans-3": "^5.2.0",
     "@fontsource/zcool-qingke-huangyou": "^5.2.0",
     "@fontsource/zcool-xiaowei": "^5.2.0",
+    "@mozilla/readability": "0.6.0",
+    "@types/chrome": "0.3.4",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/turndown": "5.0.6",
     "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "26.1.0",
+    "sharp": "0.34.5",
+    "turndown": "7.2.4",
     "typescript": "^5.9.0",
     "vite": "^7.2.0",
     "vitest": "^5.0.3"
