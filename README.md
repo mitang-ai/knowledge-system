@@ -1,153 +1,181 @@
-# 沉淀 · 知识工作空间 v4.3
+<div align="center">
 
-记录即时灵感、个人思考与新的发现，让它们逐步形成可回看、可修正、可复用的知识。支持独立账号、团队空间、理解历史与个人回顾，采用黑白界面和常驻右上角的深浅色开关。
+<a name="top"></a>
+<h1>沉淀</h1>
+<p><strong>先记下来，再慢慢想明白。</strong></p>
 
-**公开仓库从空知识空间启动，不包含已有用户、帖子、留言、附件、迁移种子或运行数据库。** 原有私有资料与代码发布分开处理。
+<p>
+  <a href="package.json"><img src="https://img.shields.io/badge/version-4.3.0-171717?style=flat-square" alt="Version 4.3.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-171717?style=flat-square" alt="MIT License"></a>
+  <a href="https://github.com/mitang-ai/knowledge-system/actions/workflows/checks.yml"><img src="https://img.shields.io/github/actions/workflow/status/mitang-ai/knowledge-system/checks.yml?branch=main&amp;style=flat-square&amp;label=checks&amp;color=171717" alt="GitHub Actions 实时检查状态"></a>
+  <a href="https://github.com/mitang-ai/knowledge-system/stargazers"><img src="https://img.shields.io/github/stars/mitang-ai/knowledge-system?style=flat-square&amp;label=Star&amp;color=171717" alt="GitHub Stars"></a>
+</p>
 
-## 启动
+<p>
+  <a href="https://zhishi.51wanai.com"><img src="https://img.shields.io/badge/%E5%9C%A8%E7%BA%BF%E4%BD%BF%E7%94%A8-171717?style=for-the-badge" alt="在线使用"></a>
+  <a href="#快速开始"><img src="https://img.shields.io/badge/%E6%9C%AC%E5%9C%B0%E8%BF%90%E8%A1%8C-171717?style=for-the-badge" alt="本地运行"></a>
+  <a href="#浏览器插件"><img src="https://img.shields.io/badge/%E6%8F%92%E4%BB%B6%E5%AE%89%E8%A3%85-171717?style=for-the-badge" alt="安装 Chrome / Edge 插件"></a>
+</p>
 
-需要 Node.js **22.13+ 或 24+**，Python **3.11+**。
+<p><a href="#用自己的-ai">AI 接入</a> · <a href="#接给其他程序">API / MCP</a> · <a href="#文档与反馈">文档与反馈</a></p>
+
+</div>
+
+**沉淀**是一套可以自己部署的知识工作空间。随手记点东西，整理读过的资料，隔几天再回来补充。原文在，理解怎么变的也在。
+
+不用先想标题，也不用立刻分好类。写下来就行。
+
+<p align="center">
+  <img src="docs/readme/assets/workspace.png" alt="沉淀的真实界面：随手记、最近更新、主题、回顾与当前理解" width="1000">
+</p>
+<p align="center"><sub>本地运行截图，笔记为示例内容。深浅色、字体和阅读宽度都能调整。</sub></p>
+
+## 记下之后呢？
+
+| 想做的事 | 在沉淀里 |
+| :--- | :--- |
+| 把刚冒出来的想法留下 | 无标题随手记，草稿自动留在设备上。没整理的先放收件箱。 |
+| 留住读过的材料 | 保存链接、文件和出处。一条记录可以关联多个主题，不用复制几份。 |
+| 把理解接着写下去 | 写补充，选一条作为当前理解；原文、编辑版本和理解历史都能回看。 |
+| 隔段时间再遇见它 | 给记录安排回顾，也可以星标、归档，或整理成自己的经验手册。 |
+| 和别人一起积累 | 个人空间与团队空间分开，成员按角色读写。加入团队不会开放个人记录。 |
+| 带走自己的内容 | 支持 Markdown、JSON、ZIP 导出，还有回收站、备份和恢复。 |
+
+<p align="center">
+  <img src="docs/readme/assets/knowledge-flow.png" alt="一条记录的使用路径：记下来，归到主题，补充理解，回头看看" width="860">
+</p>
+
+这是一种用法，不是必须走完的流程。只拿它当随手记，也可以。
+
+## 快速开始
+
+需要 **Node.js 22.13+ 或 24+**、**Python 3.11+**。核心服务只用 Python 标准库。
 
 ```bash
+git clone https://github.com/mitang-ai/knowledge-system.git
+cd knowledge-system
 npm ci
 npm run build
 python scripts/start.py
 ```
 
-浏览器打开 `http://127.0.0.1:8787`。也可使用 `bash start.sh`、`启动.cmd` 或 `启动.command`；这些启动器需要先完成前端构建。运行数据位于 `server/storage/`，已排除在 Git 之外。
+打开 [http://127.0.0.1:8787](http://127.0.0.1:8787)。保持终端运行，按 `Ctrl+C` 停止。Windows PowerShell 若拦截 npm 脚本，改用 `npm.cmd`。
 
-首次为本地个人模式。通过“偏好设置 → 账号与空间”启用登录后，当前工作空间归属该账号，关闭匿名访问。之后注册的用户拥有独立个人空间。服务监听本机地址；尚未部署为公开 SaaS。
+本地首次启动是个人模式。需要登录时，在「偏好设置 → 账号与空间」启用；已有内容归属这个账号，之后的新用户各有自己的空间。[更多启动方式与部署说明 →](docs/运行与部署.md)
 
-开发时分别运行：
+> [!IMPORTANT]
+> 在线站点可用「一键创建账号密码」。创建后先复制或下载保存卡，确认保存再进入。自动生成的账号不是邮箱，不能收邮件；丢失账密可能无法找回。
 
-```bash
-python server/app.py
-npm run dev
-```
+## 浏览器插件
 
-Vite 位于 `http://127.0.0.1:5173`，将 `/api`、OAuth 与发现元数据请求转给本地服务。**AI 请求不使用此代理。**
+**沉淀 · 随手记**适用于 Chrome 116+ 和支持侧边栏的新版 Edge。看网页时就能记，不必来回切窗口。
 
-## 使用自己的 AI
+| 操作 | 快捷键 |
+| :--- | :--- |
+| 记一个想法 | <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>N</kbd> |
+| 沉淀当前网页或选中文字 | <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> |
+| 提交编辑器里的记录 | <kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Enter</kbd> |
 
-进入“偏好设置 → AI 与模型”：
-
-1. 选择 OpenAI 或 Anthropic 格式，填写 API 根地址与 Key。支持相同协议的自定义服务。
-2. 探测模型目录，勾选多个常用版本；目录缺少某个版本时，可手动填写准确的模型 ID。
-3. 单独测试调用，选择默认模型并保存到当前浏览器。测试会向服务发送简短请求，可能计费。
-4. 在任意页面右上角打开 AI 侧栏，选择模型及实际发送的来源，使用对话、总结或分析。
-5. 点击引用查看来源，修改有价值的结果后收录为补充、新记录或待验证经验。原文保持完整。
-
-### 配置与内容的边界
-
-- API 地址、Key、模型目录和调用偏好仅保存在浏览器，不提交到本系统服务器、数据库、排版偏好、导出或备份。
-- “记住此浏览器”使用 localStorage；“仅本次浏览器会话”的 Key 使用 sessionStorage。按账号隔离配置，切换账号清空活动 AI 状态。浏览器存储本身不是加密保险箱。
-- 浏览器直接请求所选 AI 服务，授权凭据与本次选中的材料会发给该服务，费用由服务方计收。
-- AI 对话和未收录结果留在当前页面会话。只有主动确认收录的知识与来源片段进入正常知识保存流程。
-- 接口必须允许浏览器跨域访问。本系统不会在直连失败时改用服务器代理。
-- 多选模型形成可切换名单，常规任务每次只使用一个；旧回答保留请求模型与服务响应版本。滚动别名不保证冻结版本。
-
-### 文件、网页与知识库
-
-“文件与链接”在浏览器提取 TXT、Markdown、CSV、JSON、HTML、文字 PDF 与 DOCX。文件上限 20 MB；PDF 保留真实页码。原始文件和提取文字只有点击“保存来源”后才进入知识库。
-
-网页先尝试浏览器读取并展示正文。跨域限制、登录页或无法取得文章时，可以粘贴正文或上传文件；普通模型只收到 URL 时不会被当成已经读到了全文。HTML 和模型返回不执行脚本。
-
-长文需明确允许分段阅读，展示预计请求次数和进度。输出截断、读取不全和调用失败会保留说明；不会静默重试到另一个模型。
-
-知识库对话先在当前可见空间按关键词查找候选，用户选择来源后再发送。当前版本不自动建立第三方向量索引，也不自动上传全库。修改发送范围后，后续调用不会继续携带旧范围的对话。
-
-## 知识沉淀路径
-
-- 无标题快速记录、设备草稿、附件、模板与来源链接。
-- 收件箱、多主题关联、主题说明、事务合并。
-- 补充、引用、进展、当前理解与理解变化历史。
-- 经验手册、个人态度与独立实践验证、星标、归档。
-- 显式选择个人回顾周期，保留次数和时间。
-- 正文与补充搜索、空间/类型/时间筛选。
-- 回收站、编辑版本、备份与恢复、Markdown/JSON/ZIP 导出。
-- 团队成员角色、一次性邀请、服务端权限；平台管理仅查看账号及空间元信息。
-- 十种免费开源字体、可调字号、行距、阅读宽度、密度和减少动效。
-
-[产品与设计说明](docs/设计与功能说明.md) · [AI 实现与边界](docs/AI接入说明.md) · [验证记录](docs/验证记录.md) · [Logo 使用说明](docs/design/Logo使用说明.md)
-
-## Agent、API 与自己的知识工具
-
-“偏好设置 → 连接与迁移”管理范围授权、目的地、待采纳建议、导出记录、增量规则、访问审计和团队外部策略。
-
-- `/api/v1` 提供版本化知识接口；原文、理解、讨论、历史、附件分别选择。内容包含稳定片段 ID、修订、作者、出处与完整性标注。
-- 用户自己的 Agent 使用 Python SDK、CLI 或 MCP。搜索只匹配授权内容，分页和变化游标不公开全站序号；撤销、停用账号或移出团队会阻断后续访问。
-- Agent 的整理默认进入待采纳区，用户核对、编辑后收录；直接写入需要额外的固定动作和每日上限授权。
-- 在知识详情或知识集合选择“提取与沉淀”，选择材料与片段，使用完整记录或整理成文。自己的浏览器 AI 可以整理稿件，Key 仍只在浏览器。
-- 用户确认固定稿件、源修订和目标后，本地连接器写入 Obsidian、飞书文档／知识库、ima 笔记／知识库，并提交注明验证级别的回执。
-- 固定增量规则可以预先批准完整记录；本地连接器离线时，任务保留在队列。未知写入结果不能自动重建。
-
-安装客户端与本地 MCP：
+右键菜单也能采集。原始材料、自己的想法和 AI 整理分开保留；断网时先进入本机队列，拿到系统记录 ID 后才显示已保存。
 
 ```bash
-python -m pip install -e ".[mcp,keychain]"
-sediment keychain-set my-agent
-sediment profile-add default --url http://127.0.0.1:8787 --credential keychain:my-agent
-sediment capabilities
-sediment mcp
+npm run build:extension
 ```
 
-`keychain-set` 交互读取令牌，不在命令行接受明文。没有系统钥匙串时，可配置 `env:SEDIMENT_TOKEN`，由自己的运行环境提供变量；不会降级写入明文文件。
+打开 `chrome://extensions` 或 `edge://extensions`，启用开发者模式，加载 **`build/browser-extension/unpacked`**。在插件设置里连接自己的知识空间，按需要批准写入权限。
 
-远程 Streamable HTTP MCP 是独立进程：
+目前是**本地加载版，未上架商店**。X、Reddit 只采集已加载内容；图片保存的是来源链接，不是附件归档。安装、授权和采集限制见 [插件使用说明](extension/README.md)。
 
-```bash
-sediment mcp --transport streamable-http --url http://127.0.0.1:8787 --resource http://127.0.0.1:8791/mcp --port 8791
-```
+## 用自己的 AI
 
-远程进程逐次验证客户端令牌，通过核心服务提供 OAuth 授权码、S256 PKCE、资源绑定、短时令牌、刷新轮换与发现元数据。核心服务的 `SEDIMENT_MCP_PUBLIC_URL` 必须与 MCP 的 `--resource` 一致。OAuth 的人工同意页不会提供给 Agent 自行调用。
+AI 可用，也可以不用。没有 Key，记录、整理和回顾照常工作。
 
-仓库提供四个标准 Agent Skill；复制到自己的 Agent 技能目录后使用，它们不包含密钥，也不增加权限。
+1. 在「偏好设置 → AI 与模型」填自己的地址和 Key，选择 OpenAI 兼容协议或 Anthropic。
+2. 探测模型目录，勾选常用模型，设一个默认值。每次任务只用当前选中的一个模型，切换不用重填配置。
+3. 打开 AI 侧栏，选好要发送的材料。聊一聊、做摘要或分析，有用的部分修改后再收录。
 
-[开放知识与连接器使用说明](docs/开放知识与连接器.md) · [OpenAPI](docs/openapi-v1.json) · [Skill](skills/) · [扩展开发契约](docs/扩展开发契约.md)
+<p align="center">
+  <img src="docs/readme/assets/ai-boundary.png" alt="AI 数据流：浏览器直接把 Key 和选中的材料发给自己的 AI 服务，用户确认后才把结果收录到知识系统" width="860">
+</p>
 
-## 私有资料与迁移
+**Key 不交给沉淀服务器。** 它可留在当前浏览器会话，也可由你选择记住此设备。所选材料和 Key 会发给你填的 AI 服务，调用可能计费；浏览器存储本身不是加密保险箱。
 
-公开版本不会自动装载项目中的种子文件。已有实例继续使用自己的 `server/storage/`，更新源码不替换运行数据。
+接口需要允许浏览器跨域访问，失败时不会改走系统服务器。文字 PDF、DOCX、文本文件可以先在浏览器读取；网页读不到，就粘贴正文。不会只拿一个 URL 假装读完了全文。
 
-如需离线导入外部迁移种子，在**空实例首次启动前**显式设置 `SEDIMENT_SEED_DIR` 指向仓库外目录。初始化只执行一次。种子结构为 `ks_items.json`、`ks_replies.json`、`ks_profiles.json`；不要把真实种子加入仓库。
+长文先确认分段调用。知识库对话由你选择来源，不自动把全库发出去。[AI 接入与限制 →](docs/AI接入说明.md)
 
-整实例迁移需要停止服务，再复制完整存储目录，或通过 `SEDIMENT_STORAGE` 指向该目录，避免漏掉 SQLite WAL。个人备份按用户隔离，导入、恢复和永久删除前保留备份。AI 配置不随知识归档迁移，换设备需要重新填写。
+## 接给其他程序
 
-## 检查
+自己的脚本和 Agent，也能接着用这些知识。
+
+| 入口 | 适合做什么 | 继续看 |
+| :--- | :--- | :--- |
+| **REST API · `/api/v1`** | 按授权范围搜索、读取、写入，处理修订与增量变化 | [OpenAPI](docs/openapi-v1.json) |
+| **Python SDK / CLI / MCP** | 把知识接给自己的 Agent，提交整理建议或执行已批准的任务 | [接入说明](docs/开放知识与连接器.md) |
+| **捕获包 / JavaScript SDK** | 让其他程序生成采集包，导入插件，或通过范围 API 提交 | [插件开发契约](docs/浏览器插件开发与验收.md) |
+
+授权默认只读。Agent 的整理先进入待采纳区，直接写入要另开权限和每日额度。可读内容、历史、附件分别选择，也能撤销授权。
+
+本地连接器支持 Obsidian、飞书和 ima。飞书、ima 目前通过的是合成协议测试，接真实账号还需配置、验证。远程 MCP 也要单独部署，网站上线不等于 MCP 已经对外开放。
+
+## 部署与数据
+
+**公开仓库不带任何已有用户、知识、附件或运行数据库。** 本地运行数据默认在 `server/storage/`，已排除在 Git 之外。
+
+生产模式需要 HTTPS、反向代理和离线配置的所有者账号。别把本地个人模式直接暴露到公网。邮件验证与找回目前没有实现；公开运营还要自己配置限流、监控和备份。
+
+<details>
+<summary><strong>更新、迁移与备份时要留意什么？</strong></summary>
+
+- 更新代码时保留现有存储目录，不用空库替换。可用 `SEDIMENT_STORAGE` 指向独立目录。
+- 整实例迁移先停服务，再复制完整存储目录，避免漏掉 SQLite WAL。导入、恢复和永久删除前先备份。
+- 外部种子只能在空实例首次启动前，通过 `SEDIMENT_SEED_DIR` 指向仓库外目录。结构为 `ks_items.json`、`ks_replies.json`、`ks_profiles.json`，只初始化一次，不要提交真实文件。
+- AI 配置不跟随知识备份迁移。换设备需要重新填写，卸载插件前也要另存设备草稿。
+
+[运行与生产部署](docs/运行与部署.md) · [一键账号与发布说明](docs/一键账号与发布.md)
+
+</details>
+
+<details>
+<summary><strong>开发目录与检查命令</strong></summary>
+
+| 目录 | 内容 |
+| :--- | :--- |
+| `src/` | 知识界面、浏览器 AI、连接与迁移 |
+| `server/` | 核心 API、SQLite、账号权限、OAuth、任务 |
+| `extension/` | MV3 侧边栏、采集、设备草稿、同步队列与 SDK |
+| `sediment/` | Python SDK、CLI、MCP、本地连接器 |
+| `skills/` | Agent Skills，不包含密钥或额外权限 |
+| `tests/` | 合成数据、协议与浏览器检查 |
 
 ```bash
 npm run build
 npm run test:ai
+npm run typecheck:extension
 python -m pip install -e ".[test]"
 npm test
 ```
 
-可选浏览器检查需要 Python Playwright 与 Chromium，使用独立临时数据库与合成内容：
+`test:ai` 当前运行全部 Vitest 测试，包括账号和插件模块。浏览器检查使用隔离数据；配置和命令见 [验证记录](docs/验证记录.md)、[插件开发与验收](docs/浏览器插件开发与验收.md)。Windows 的旧 Python 套件可能遇到符号链接权限、编码或临时 SQLite 文件占用问题，不能把部分通过当成全量通过。
 
-```bash
-python tests/browser_smoke.py
-python tests/browser_ai.py
-python tests/browser_connect.py
-```
+字体与 PDF 资源在构建时准备，部署后不依赖远程字体 CDN。截图复现方式见 [README 素材说明](docs/readme/README.md)。
 
-可通过 `SEDIMENT_CHROMIUM` 指定 Chromium 路径。AI 浏览器检查使用本地协议测试服务，核对请求、存储、文件解析与收录，不消耗真实 API 配额。
+</details>
 
-## 结构与部署边界
+## 文档与反馈
 
-```text
-src/ai/           浏览器配置、协议适配、材料读取、AI 侧栏与收录
-src/views/        知识、设置、团队及管理页面
-server/           核心 API、SQLite、知识修订、授权、OAuth、建议与任务
-sediment/         Python SDK、CLI、MCP、本地连接器与账本
-src/connect/      授权、目的地、提取预览、待采纳、验证与审计界面
-skills/           四个 Agent Skills
-public/fonts/     十种开源字体及授权
-public/brand/     单色矢量品牌素材
-scripts/          启动与本地字体/PDF 资源准备
-tests/            合成数据与协议测试
-docs/             产品、接入与验证说明
-```
+| 使用沉淀 | 接入与开发 |
+| :--- | :--- |
+| [产品与功能](docs/设计与功能说明.md) | [开放知识与连接器](docs/开放知识与连接器.md) |
+| [AI 接入](docs/AI接入说明.md) | [系统扩展契约](docs/扩展开发契约.md) |
+| [浏览器插件](extension/README.md) | [插件设计与开发](docs/浏览器插件设计与调研.md) |
+| [运行与部署](docs/运行与部署.md) | [验证记录](docs/验证记录.md) |
 
-构建自动从锁定的 npm 依赖准备字体及 PDF 资源。部署后的阅读不依赖远程字体 CDN。
+有问题就 [开个 Issue](https://github.com/mitang-ai/knowledge-system/issues/new)。说清做了什么、预期是什么、实际看到了什么；日志记得去掉密码、Key 和私有内容。
 
-此版本已提供授权审计、修订冲突检查与可持久化任务，默认仍为本机运行。生产模式需要 HTTPS 公共地址及离线配置的所有者账号，禁止匿名所有者和首次访客认领。公开运营还需要反向代理限流、邮件验证与找回、备份和运维；本次没有部署服务器。飞书、ima 已通过合成协议测试，真实账号仍需配置后验证。不要将运行目录、私有迁移文件或个人截图提交到 GitHub。
+欢迎修问题、补文档、加连接器。改实现前先看对应模块的契约，不混入运行数据。觉得用得上，留个 [Star](https://github.com/mitang-ai/knowledge-system/stargazers) 就好。
+
+<div align="center">
+  <sub><a href="LICENSE">MIT</a> · 你的记录，你的模型，你的存储。</sub><br>
+  <sub><a href="#top">回到顶部 ↑</a></sub>
+</div>
